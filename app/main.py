@@ -2,7 +2,7 @@ from typing import List
 from fastapi import HTTPException
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_
+from sqlalchemy import and_, func, text
 from . import models, database, schema
 from .schema import PlaySchema
 from fastapi import Depends
@@ -49,6 +49,32 @@ def search_lines(query: str, genre: str = None, limit: int = 50, db: Session = D
     
     q = q.limit(min(limit, 100))
     return q.all()
+
+# Full-text search
+@app.get("/search_tsv", response_model=list[schema.LineSchema])
+def search_lines_tsv(query: str, db: Session = Depends(get_db)):
+    q = db.query(models.Line).options(
+        joinedload(models.Line.annotations),
+        joinedload(models.Line.scene).joinedload(models.Scene.play),
+        joinedload(models.Line.character)
+    )
+    
+    # Full-text search w/ PostgreSQL @@ operator
+    ts_query = func.to_tsquery(query)
+    q = q.filter(models.Line.text_tsv.op('@@')(ts_query))
+    
+    return q.limit(50).all()
+
+@app.get("/db/indexes")
+def get_indexes(db: Session = Depends(get_db)):
+    result = db.execute(text("""
+        SELECT tablename, indexname, indexdef
+        FROM pg_indexes
+        WHERE schemaname = 'public';
+    """))
+    
+    # Use .mappings() to get dicts
+    return [row for row in result.mappings()]
 
 # Retrieve all play ids
 @app.get("/plays/ids")
