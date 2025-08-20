@@ -4,6 +4,7 @@ from sqlalchemy import Column, Integer, String, Text, ForeignKey, JSON, DateTime
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import relationship
 from .database import Base
+from sqlalchemy.dialects.postgresql import JSONB
 
 
 class Play(Base):
@@ -11,7 +12,7 @@ class Play(Base):
     id = Column(Integer, primary_key=True)
     title = Column(String, nullable=False)
     genre = Column(String)
-    play_metadata = Column(JSON)
+    play_metadata = Column(JSONB, default=dict) 
 
     # relationships
     scenes = relationship("Scene", back_populates="play")

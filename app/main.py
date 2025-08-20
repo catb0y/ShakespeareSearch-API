@@ -2,11 +2,11 @@ from typing import List
 from fastapi import HTTPException
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import and_
 from . import models, database, schema
 from .schema import PlaySchema
-from sqlalchemy import and_
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy import cast, String, Integer, and_
+from fastapi import Depends
+from sqlalchemy.orm import Session
 
 app = FastAPI()
 
@@ -109,40 +109,31 @@ def get_metadata_schema(db: Session = Depends(get_db)):
 
 
 # Search lines by play metadata key
-
 @app.get("/search_metadata")
 def search_lines_by_metadata(
-    year_published_min: int = None,
-    year_published_max: int = None,
-    first_produced_min: int = None,
-    first_produced_max: int = None,
+    year_published: str = None,
+    first_produced: str = None,
     period: str = None,
     source: str = None,
     db: Session = Depends(get_db)
 ):
-    query = db.query(models.Line).join(models.Scene).join(models.Play)
+    query = db.query(models.Play)
     conditions = []
 
-    # Numeric filters
-    if year_published_min is not None:
-        conditions.append(cast(models.Play.play_metadata["year_published"], Integer) >= year_published_min)
-    if year_published_max is not None:
-        conditions.append(cast(models.Play.play_metadata["year_published"], Integer) <= year_published_max)
-    if first_produced_min is not None:
-        conditions.append(cast(models.Play.play_metadata["first_produced"], Integer) >= first_produced_min)
-    if first_produced_max is not None:
-        conditions.append(cast(models.Play.play_metadata["first_produced"], Integer) <= first_produced_max)
-
-    # String filters (partial match)
+    if year_published:
+        conditions.append(models.Play.play_metadata['year_published'].astext == year_published)
+    if first_produced:
+        conditions.append(models.Play.play_metadata['first_produced'].astext == first_produced)
     if period:
-        conditions.append(cast(models.Play.play_metadata["period"], String).ilike(f"%{period}%"))
+        conditions.append(models.Play.play_metadata['period'].astext == period)
     if source:
-        conditions.append(cast(models.Play.play_metadata["source"], String).ilike(f"%{source}%"))
+        conditions.append(models.Play.play_metadata['source'].astext.ilike(f"%{source}%"))
 
     if conditions:
         query = query.filter(and_(*conditions))
 
-    return query.options(joinedload(models.Line.annotations)).all()
+    return query.options(joinedload(models.Play.scenes).joinedload(models.Scene.lines)).all()
+
 
 # Add metadata
 @app.post("/play/metadata/", response_model=PlaySchema)
