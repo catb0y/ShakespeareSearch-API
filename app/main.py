@@ -127,11 +127,20 @@ def add_annotation(line_id: int, annotation: schema.AnnotationCreate, db: Sessio
 @app.get("/metadata/schema")
 def get_metadata_schema(db: Session = Depends(get_db)):
     return {
-        "year_published": "int",
-        "first_produced": "int",
-        "period": "str",
-        "source": "str",
+  "catalog_title": "str",
+  "year_published": "str",
+  "first_produced": "str",
+  "historical_setting_year": "str",
+  "historical_event": "str",
+  "period_label": "str",
+  "genre_subtype": "str",
+  "principal_themes": ["str", "str", "str"],
+  "principal_figures": ["str", "str", "str"],
+  "primary_sources": ["str", "str"],
+  "reference_source": "str",
+  "editorial_notes": "str"
 }
+
 
 
 # Search lines by play metadata key
