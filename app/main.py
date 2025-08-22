@@ -85,10 +85,10 @@ def get_play_ids(db: Session = Depends(get_db)):
         for play in q.all()
         ]
     
-# Retrieve all line ids
+# Retrieve all line ids per play
 @app.get("/lines/ids")
-def get_line_ids(limit: int = 50, db: Session = Depends(get_db)):
-    q = db.query(models.Line)
+def get_line_ids_per_play(play_id: int, limit: int = 50, db: Session = Depends(get_db)):
+    q = db.query(models.Line).join(models.Scene).filter(models.Scene.play_id == play_id)
     q = q.limit(min(limit, 100))
     return [
         [{"play_title": line.scene.play.title, "scene_number": line.scene.scene_number, "line": line.text, "line_id": line.id}] 
@@ -114,6 +114,7 @@ def get_annotations(line_id: int, db: Session = Depends(get_db)):
     return annotations
 
 # Add annotations for a line
+# todo create reliable annotation
 @app.post("/lines/{line_id}/annotations", response_model=schema.AnnotationOut)
 def add_annotation(line_id: int, annotation: schema.AnnotationCreate, db: Session = Depends(get_db)):
     db_annotation = models.Annotation(line_id=line_id, note=annotation.note, author=annotation.author)
