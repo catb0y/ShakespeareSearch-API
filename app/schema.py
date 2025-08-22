@@ -1,25 +1,24 @@
 # Schema for Pydantic
 
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
+from datetime import datetime
 
 class AnnotationSchema(BaseModel):
     id: int
-    note: str
+    note: Dict[str, Any]
+    author: Optional[str]
+    created_at: datetime
+
     class Config:
         orm_mode = True
-        
+
 class AnnotationCreate(BaseModel):
-    note: str
+    note: Dict[str, Any]
     author: Optional[str] = None
 
-class AnnotationOut(BaseModel):
-    id: int
-    note: str
-    author: Optional[str] = None
-
-    class Config:
-        orm_mode = True
+class AnnotationOut(AnnotationSchema):
+    pass
 
 class LineSchema(BaseModel):
     id: int

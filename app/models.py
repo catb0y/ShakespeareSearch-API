@@ -55,12 +55,11 @@ class Line(Base):
     character = relationship("Character", back_populates="lines")
     annotations = relationship("Annotation", back_populates="line")
 
-
 class Annotation(Base):
     __tablename__ = "annotations"
     id = Column(Integer, primary_key=True, index=True)
     line_id = Column(Integer, ForeignKey("lines.id"), nullable=False)
-    note = Column(Text, nullable=False)
+    note = Column(JSONB, nullable=False)
     author = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

@@ -113,8 +113,9 @@ def get_annotations(line_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="No annotations found")
     return annotations
 
+# todo maybe: add endpoint to remove annotations?
+
 # Add annotations for a line
-# todo create reliable annotation
 @app.post("/lines/{line_id}/annotations", response_model=schema.AnnotationOut)
 def add_annotation(line_id: int, annotation: schema.AnnotationCreate, db: Session = Depends(get_db)):
     db_annotation = models.Annotation(line_id=line_id, note=annotation.note, author=annotation.author)
@@ -122,7 +123,6 @@ def add_annotation(line_id: int, annotation: schema.AnnotationCreate, db: Sessio
     db.commit()
     db.refresh(db_annotation)
     return db_annotation
-
 
 # Get metadata schema
 @app.get("/metadata/schema")
