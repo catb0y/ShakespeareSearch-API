@@ -2,11 +2,15 @@ from typing import List
 from fastapi import HTTPException
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, func, text
+from sqlalchemy import and_, func, text, Integer
 from . import models, database, schema
 from .schema import PlaySchema
 from fastapi import Depends
 from sqlalchemy.orm import Session
+from sqlalchemy import func
+from sqlalchemy.orm import joinedload
+from sqlalchemy.types import Text
+from sqlalchemy import cast
 
 app = FastAPI()
 
@@ -125,6 +129,7 @@ def add_annotation(line_id: int, annotation: schema.AnnotationCreate, db: Sessio
     return db_annotation
 
 # Get metadata schema
+# todo why not ask for all?
 @app.get("/metadata/schema")
 def get_metadata_schema(db: Session = Depends(get_db)):
     return {
@@ -143,32 +148,36 @@ def get_metadata_schema(db: Session = Depends(get_db)):
 }
 
 
+@app.get("/debug_play_metadata")
+def debug_play_metadata(db: Session = Depends(get_db)):
+    plays = db.query(models.Play).all()
+    return [{"title": p.title, "metadata": p.play_metadata} for p in plays]
 
-# Search lines by play metadata key
-@app.get("/search_metadata")
-def search_lines_by_metadata(
-    year_published: str = None,
-    first_produced: str = None,
-    period: str = None,
-    source: str = None,
-    db: Session = Depends(get_db)
-):
-    query = db.query(models.Play)
-    conditions = []
+###
 
-    if year_published:
-        conditions.append(models.Play.play_metadata['year_published'].astext == year_published)
-    if first_produced:
-        conditions.append(models.Play.play_metadata['first_produced'].astext == first_produced)
-    if period:
-        conditions.append(models.Play.play_metadata['period'].astext == period)
-    if source:
-        conditions.append(models.Play.play_metadata['source'].astext.ilike(f"%{source}%"))
 
-    if conditions:
-        query = query.filter(and_(*conditions))
+# todo: "1597-1598"
+@app.get("/search_lines_by_metadata", response_model=list[schema.LineSchema])
+def search_lines_by_metadata(search: str = None, db: Session = Depends(get_db)):
+    query = db.query(models.Line).join(models.Scene).join(models.Play)
 
-    return query.options(joinedload(models.Play.scenes).joinedload(models.Scene.lines)).all()
+    if search:
+        if "-" in search or search.isnumeric():
+            query = query.filter(
+                cast(models.Play.play_metadata, Text).ilike(f"%{search}%")
+            )
+        else:
+            tsquery = func.plainto_tsquery('english', search)
+            query = query.filter(
+                func.to_tsvector('english', cast(models.Play.play_metadata, Text)).op('@@')(tsquery)
+            )
+
+    return query.options(
+        joinedload(models.Line.character),
+        joinedload(models.Line.scene).joinedload(models.Scene.play),
+        joinedload(models.Line.annotations)
+    ).all()
+###
 
 
 # Add metadata
