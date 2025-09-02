@@ -5,3 +5,4 @@ python-dotenv
 sqlalchemy
 pandas
 pydantic  # remove in case of more basic schema
+alembic
